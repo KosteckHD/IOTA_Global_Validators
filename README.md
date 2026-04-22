@@ -22,15 +22,15 @@ Zaawansowany, responsywny i w pełni interaktywny panel (dashboard) służący d
 Ze względu na skomplikowany interfejs graficzny najeżony animacjami napędzanymi strumieniami i rygorystyczny design - podczas kodowania wdrożyliśmy rozwiązania dla poniższych, ekstremalnych wyzwań technologicznych:
 
 ### 1. High-Frequency Streaming bloków (Pacing & Buffering queue)
-Panel odbiera potężny, asynchroniczny zrzut danych sieciowych (Live Checkpoints). Zamiast "wstrzykiwać" surowe dane bezpośrednio w stan Reacta – co powodowało histeryczne "urwane" przeskoki klocków przed oczyma klienta i nieczytelność historii – zastosowaliśmy **Kolejkowanie asynchroniczne (UI Sync Tick Pacing)**.
-* Stworzyliśmy wyizolowaną od re-renderów warstwę z buforem (lockQueueRef), który układa odebrane checkopinty. Następnie timer po stronie graficznej, używając funkcji wygładzającej (naszego hooka useSmoothNumber z interpolacją krzywych *easeOutCubic*), precyzyjnie asymiluje obiekty co 150-400ms. 
-* W efekcie strumienie zdarzeń Proposal -> Finalized spływają płynnie klockami po prawej stronie na lewo, mając całkowity czas na zgranie zaplanowanych animacji blasku (Glowing CSS).
+Panel odbiera potężny, asynchroniczny zrzut danych sieciowych (Live Checkpoints). Zamiast dawać surowe dane bezpośrednio w stan Reacta – (co powodowało histeryczne urwane przeskoki klocków przed oczyma klienta i nieczytelność historii)  zastosowałem **Kolejkowanie asynchroniczne (UI Sync Tick Pacing)**.
+* Stworzyliśmy wyizolowaną od re-renderów warstwę z buforem (lockQueueRef), który układa odebrane checkopinty. Następnie timer po stronie graficznej, używając funkcji wygładzającej  hooka useSmoothNumber z interpolacją krzywych), precyzyjnie asymiluje obiekty co 150-400ms. 
+* W efekcie strumienie zdarzeń Proposal -> Finalized/Timeout spływają płynnie klockami po prawej stronie na lewo, mając całkowity czas na zgranie zaplanowanych animacji blasku .
 
 ### 2. Ekstremalna Optymalizacja Renderera 3D względem React.js
-Zbudowanie pełnego, rotującego widoku Ziemi 3D z przelatującymi "łukami" (Arcs) pozycjonowanymi geograficznie było kluczem. Narząd globe.gl naturalnie stawia ogromny opór jeśli wrzuca się go po prostacku w cykl życia Reacta (V-DOM), gdyż przy każdej paczce danych z sieci, ekran ulegałby totalnemu ścięciu i re-inicjalizacji.
-* **Złoty kompromis:** Cały obiekt globu zamknęliśmy w solidnym kontenerze opartym w 100% o stabilne ref-y (useRef). Pętle animacji React opierają się u nas teraz na zagnieżdżonym nasłuchu equestAnimationFrame.
-* Dodatkowo zoptymalizowaliśmy "karmiciela" obiektu licząc sygnatury różnicowe obiektów i koordynatów (rcSignature, 
-odeSignature). Dane trafiają do Three.js przez uderzenie natywnego API biblioteki globeApiRef.current.arcsData() stricte tylko wtedy, gdy sygnatury hash faktycznie sygnalizują znaczącą różnicę topologii sieci bez wymuszania narzutu (overheadu).
+Zbudowanie pełnego, rotującego widoku Ziemi 3D z przelatującymi łukami pozycjonowanymi geograficznie było kluczem. Narząd globe.gl naturalnie stawia ogromny opór jeśli wrzuca się go po prostacku w cykl życia Reacta , gdyż przy każdej paczce danych z sieci, ekran ulegałby totalnemu ścięciu i re-inicjalizacji.
+* **Złoty kompromis:** Cały obiekt globu zamknęliśmy w solidnym kontenerze opartym w 100% o stabilne ref-y (useRef). Pętle animacji React opierają się u nas teraz na zagnieżdżonym nasłuchu 
+
+* Dodatkowo zoptymalizowaliśmy "karmiciela" obiektu licząc sygnatury różnicowe obiektów i koordynatów. Dane trafiają do Three.js przez uderzenie natywnego API biblioteki globeApiRef.current.arcsData() stricte tylko wtedy, gdy sygnatury hash faktycznie sygnalizują znaczącą różnicę topologii sieci bez wymuszania narzutu.
 
 ### 3. Responsywność RWD i "Fluid Glassmorphism"
 Panel analityczny tej wagi domyślnie projektuje się tylko pod Desktop. Przystosowanie go do pełnej responsywności mobilnej – bez sztucznego obcinania użyteczności – wymagało solidnego rygoru w CSS.
