@@ -1,4 +1,4 @@
-#﻿﻿# IOTA Future Globe - Nightly Validators Dashboard
+## IOTA Future Globe - Nightly Validators Dashboard
 
 Czytelny dashboard do monitorowania walidatorow IOTA z widokiem 3D globu oraz odswiezaniem danych na zywo.
 
