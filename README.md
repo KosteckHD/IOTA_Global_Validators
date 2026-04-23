@@ -1,3 +1,15 @@
+<div align="center">
+
+![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![IOTA](https://img.shields.io/badge/IOTA-Network-101010?style=for-the-badge&logo=iota)
+
+</div>
+
+---
+
 ## IOTA Future Globe - Nightly Validators Dashboard
 
 Czytelny dashboard do monitorowania walidatorow IOTA z widokiem 3D globu oraz odswiezaniem danych na zywo.
