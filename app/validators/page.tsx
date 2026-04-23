@@ -27,10 +27,10 @@ export default async function ValidatorsPage(props: { searchParams?: Promise<{ n
   }
 
   return (
-    <main className="min-h-screen flex bg-gradient-to-rt from-purple-950 via-indigo-950 to-black flex-col overflow-x-clip text-blue-50">
+    <main className="min-h-screen flex bg-linear-to-b from-indigo-950 via-grey-900 to-grey-950 flex-col overflow-x-clip text-blue-50">
       <Navbar items={navItems} activeHref="/validators" isLive={true} />
 
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-8 mt-2 md:mt-4">
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-4 md:px-8 md:py-8 mt-2 ">
         <ValidatorsTable validators={validators} overview={overview} />
         <Footer />
       </div>

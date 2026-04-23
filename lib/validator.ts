@@ -1,11 +1,17 @@
 export interface ValidatorInfo {
   id: string;
   name: string;
+  description?: string;
+  projectUrl?: string;
   stakedIota: number;
   successRate: number;
   country: string;
   countryCode: string | null;
   status: 'High' | 'Medium' | 'Low';
+  votingPower?: number;
+  commissionRate?: number;
+  gasPrice?: number;
+  nextEpochStake?: number;
 }
 
 export interface NetworkOverview {
@@ -24,6 +30,19 @@ function extractCountryInfo(val: any): { name: string; code: string | null } {
   
   // Łączymy wszystkie dostępne teksty walidatora, aby zwiększyć szansę znalezienia kraju
   const combinedStr = `${nameLower} | ${descLower} | ${urlLower}`;
+
+  const escapeRegExp = (str: string): string => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  const hasKeyword = (text: string, key: string): boolean => {
+    // TLD i domeny sprawdzamy jako zwykły fragment (np. .pl, iota.guru)
+    if (key.startsWith('.') || key.includes('.')) {
+      return text.includes(key);
+    }
+
+    // Dla nazw i fraz wymagamy granic słowa, żeby np. "stakin" nie łapało "staking"
+    const pattern = new RegExp(`\\b${escapeRegExp(key)}\\b`, 'i');
+    return pattern.test(text);
+  };
 
   // Zestaw reguł przypisujący znanych dostawców infrastruktury, ich domeny i słowa kluczowe
   const countryMap: Record<string, { name: string; code: string }> = {
@@ -177,12 +196,11 @@ function extractCountryInfo(val: any): { name: string; code: string | null } {
     'egypt': { name: 'Egypt', code: 'eg' },
     'israel': { name: 'Israel', code: 'il' },
     'turkey': { name: 'Turkey', code: 'tr' },
-    'saudi arabia': { name: 'Saudi Arabia', code: 'sa' },
-    'cyprus': { name: 'Cyprus', code: 'cy' }
+    'saudi arabia': { name: 'Saudi Arabia', code: 'sa' }
   };
 
   for (const [key, value] of Object.entries(countryMap)) {
-    if (combinedStr.includes(key)) {
+    if (hasKeyword(combinedStr, key)) {
       return value;
     }
   }
@@ -269,11 +287,17 @@ export async function fetchValidators(network: string = 'mainnet'): Promise<{ va
       return {
         id: val.iotaAddress,
         name: val.name,
+        description: val.description,
+        projectUrl: val.projectUrl,
         stakedIota: totalIota,
         successRate, // Faktycznie obiektywna metryka bez randomowego mockowania
         country: countryInfo.name,
         countryCode: countryInfo.code,
-        status
+        status,
+        votingPower: Number(val.votingPower) || 0,
+        commissionRate: Number(val.commissionRate) || 0,
+        gasPrice: Number(val.gasPrice) || 0,
+        nextEpochStake: Number(val.nextEpochStake) || 0
       };
     });
 
