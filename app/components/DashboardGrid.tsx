@@ -157,20 +157,20 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
   const syncTimerRef = useRef<number | null>(null);
 
   const [largestBlockTxs, setLargestBlockTxs] = useState(Number(liveDashboard.largestBlock) || 0);
-  const blockHistoryRef = useRef<{txs: number, timestamp: number}[]>([]);
+  const blockHistoryRef = useRef<{ txs: number, timestamp: number }[]>([]);
 
   function updateLargestBlock(transactions: number) {
     const now = Date.now();
     const history = blockHistoryRef.current;
-    
+
     history.push({ txs: transactions, timestamp: now });
-    
+
     // Przechowujemy tylko dane z ostatnich 60 minut (60 * 60 * 1000 ms)
     const cutoff = now - 60 * 60 * 1000;
     while (history.length > 0 && history[0].timestamp < cutoff) {
       history.shift();
     }
-    
+
     const currentLargest = Math.max(...history.map(item => item.txs));
     if (currentLargest > largestBlockTxs) {
       setLargestBlockTxs(currentLargest);
@@ -213,12 +213,12 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
 
   useEffect(() => {
     if (!isTabVisibleRef.current) return;
-    
+
     const targetValidBlocks = targetBlocks.filter(b => b?.block);
     if (targetValidBlocks.length === 0) return;
 
     const highestKnown = lastAnimatedTargetRef.current;
-    
+
     // First paint or reset
     if (highestKnown === 0 || targetValidBlocks[0].block < highestKnown - 100) {
       const top2 = targetBlocks.slice(0, 2);
@@ -239,11 +239,11 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
         blockQueueRef.current = [...blockQueueRef.current, ...newBlocks];
       }
     }
-    
+
     const steps = Math.max(1, blockQueueRef.current.length);
     const idealTickMs = Math.floor(queueTickMs / (steps + 1));
     const tickMs = Math.max(150, Math.min(400, idealTickMs));
-    
+
     if (syncTimerRef.current !== null) {
       window.clearInterval(syncTimerRef.current);
       syncTimerRef.current = null;
@@ -251,7 +251,7 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
 
     const performTick = () => {
       if (!isTabVisibleRef.current) return;
-      
+
       // Consume one block from our queue
       if (blockQueueRef.current.length > 0) {
         const nextBlock = blockQueueRef.current.shift()!;
@@ -262,36 +262,37 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
           return [nextBlock, current[0]];
         });
       } else {
-         // Also sync properties of existing displayed blocks (e.g. status change)
-         setStagedBlocks(current => {
-           let changed = false;
-           const next = current.map(item => {
-             if (!item) return item;
-             const tMatch = targetBlocksRef.current.find(t => t?.block === item.block);
-             if (tMatch && !areRecentBlocksEqual([item], [tMatch])) {
-                changed = true;
-                return tMatch;
-             }
-             return item;
-           });
-           return changed ? next : current;
-         });
+        // Also sync properties of existing displayed blocks (e.g. status change)
+        setStagedBlocks(current => {
+          let changed = false;
+          const next = current.map(item => {
+            if (!item) return item;
+            const tMatch = targetBlocksRef.current.find(t => t?.block === item.block);
+            if (tMatch && !areRecentBlocksEqual([item], [tMatch])) {
+              changed = true;
+              return tMatch;
+            }
+            return item;
+          });
+          return changed ? next : current;
+        });
       }
-      
+
       setStagedProgress(current => {
         const target = targetProgressRef.current;
         if (areProgressArraysEqual(current, target)) return current;
-        
+
         let missingItemIdx = -1;
-        // Szukamy najstarszego brakującego bloku, by dodawać je jeden po drugim
-        for (let i = target.length - 1; i >= 0; i--) {
+        // Szukamy najnowszego brakującego bloku (index 0 = najnowszy po odwróceniu),
+        // by przy batch-update animować najpierw najświeższe bloki
+        for (let i = 0; i < target.length; i++) {
           const t = target[i];
           if (!t || t.state === 'empty') continue;
           if (t.checkpoint !== undefined) {
-             if (!current.some(c => c?.checkpoint === t.checkpoint)) {
-               missingItemIdx = i;
-               break;
-             }
+            if (!current.some(c => c?.checkpoint === t.checkpoint)) {
+              missingItemIdx = i;
+              break;
+            }
           }
         }
 
@@ -306,20 +307,22 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
             return tMatch ? { ...item, state: tMatch.state } : item;
           });
         }
-        
+
         // Jeżeli żadnego nie brakuje do przesunięcia, zaktualizuj kolory (stany) do docelowych
         let stateChanged = false;
         const next = current.map(item => {
-           if (!item || item.state === 'empty') return item;
-           const tMatch = target.find(t => t?.checkpoint === item.checkpoint);
-           if (tMatch && tMatch.state !== item.state) {
-              stateChanged = true;
-              return { ...item, state: tMatch.state };
-           }
-           return item;
+          if (!item || item.state === 'empty') return item;
+          const tMatch = target.find(t => t?.checkpoint === item.checkpoint);
+          if (tMatch && tMatch.state !== item.state) {
+            stateChanged = true;
+            return { ...item, state: tMatch.state };
+          }
+          return item;
         });
-        
-        return stateChanged ? next : target;
+
+        // Jeśli żaden kolor się nie zmienił, zostaw current bez zmian zamiast
+        // przeskakiwać natychmiast do target (co powodowało nagły "skok" barów)
+        return stateChanged ? next : current;
       });
 
       if (targetBlocksRef.current && targetBlocksRef.current.length > 0) {
@@ -331,7 +334,7 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
 
     // Do NOT run performTick immediately! Give the browser a tick cycle to digest initial payload.
     syncTimerRef.current = window.setInterval(performTick, tickMs);
-    
+
     return () => {
       if (syncTimerRef.current !== null) {
         window.clearInterval(syncTimerRef.current);
@@ -392,66 +395,67 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
   return (
     <div className="w-full flex justify-center mt-6 z-10 relative">
       <div className="w-full max-w-[1240px] px-4 md:px-0">
-        
+
         {/* --- Główna sekcja z Historią i Blokami --- */}
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6 mb-6">
-          
+
           {/* Proposal History (2/3 szerokości) */}
           <div>
-          <div className="rounded-2xl glass-panel flex flex-col overflow-hidden min-h-[300px]">
-            <div className="bg-black/30 border-b border-purple-500/20 h-[52px] px-5 flex items-center justify-between shrink-0">
-              <span className="text-base font-semibold text-zinc-300">Proposal History</span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300">
-                <span className="w-2 h-2 rounded-full bg-purple-400 mr-2 animate-pulse"></span>Live Feed
-              </span>
-            </div>
-            <div className="p-6 flex flex-col justify-center flex-grow">
-              <div className="w-full bg-black/40 border border-zinc-800/80 rounded-xl p-5 shadow-inner">
-                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-5 text-sm gap-3">
-                   <span className="text-zinc-400 font-semibold uppercase tracking-widest text-xs">Network Progress</span>
-                   <div className="flex flex-wrap gap-4">
-                     <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400/80"></span><span className="text-sky-300 text-xs font-medium">Proposal</span></span>
-                     <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></span><span className="text-purple-300 text-xs font-medium">Finalized</span></span>
-                     <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500/80"></span><span className="text-rose-300 text-xs font-medium">Timeout</span></span>
-                   </div>
-                 </div>
-                 <div className={`flex w-full gap-0.5 md:gap-1.5 h-8 md:h-12 transition-all duration-500 ease-in-out ${pulseRhythm ? 'scale-[1.01] opacity-100 drop-shadow-[0_0_12px_rgba(56,189,248,0.2)]' : 'scale-100 opacity-95 drop-shadow-none'}`}>
-                   {Array.from({ length: progressWindow }).map((_, i) => {
-                     const queueIndex = i;
-                     const state = stagedProgress?.[queueIndex]?.state ?? 'empty';
-                     const glowClass = state === 'finalized'
-                       ? 'shadow-[0_0_15px_rgba(168,85,247,0.5)]'
-                       : state === 'timeout'
-                         ? 'shadow-[0_0_15px_rgba(244,63,94,0.6)]'
-                         : state === 'proposal'
-                           ? 'shadow-[0_0_12px_rgba(56,189,248,0.4)]'
-                           : 'shadow-none';
-                     return (
-                       <div
-                         key={i}
-                         className={
-                           'progress-tick-cell flex-1 rounded-sm md:rounded transition-[background-color,transform,box-shadow] duration-700 ease-out min-w-[2px] '
-                           + statusColor(state)
-                           + ' '
-                           + glowClass
-                         }
-                       />
-                     );
-                   })}
-                 </div>
-                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-5 text-sm pt-4 border-t border-zinc-800/50 gap-2">
+            <div className="rounded-2xl glass-panel flex flex-col overflow-hidden min-h-[300px]">
+              <div className="bg-black/30 border-b border-purple-500/20 h-[52px] px-5 flex items-center justify-between shrink-0">
+                <span className="text-base font-semibold text-zinc-300">Proposal History</span>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-500/20 text-purple-300">
+                  <span className="w-2 h-2 rounded-full bg-purple-400 mr-2 animate-pulse"></span>Live Feed
+                </span>
+              </div>
+              <div className="p-6 flex flex-col justify-center flex-grow">
+                <div className="w-full bg-black/40 border border-zinc-800/80 rounded-xl p-5 shadow-inner">
+                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-5 text-sm gap-3">
+                    <span className="text-zinc-400 font-semibold uppercase tracking-widest text-xs">Network Progress</span>
+
+                    <div className="flex flex-wrap gap-4">
+                      <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-sky-400/80"></span><span className="text-sky-300 text-xs font-medium">Proposal</span></span>
+                      <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]"></span><span className="text-purple-300 text-xs font-medium">Finalized</span></span>
+                      <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm bg-rose-500/80"></span><span className="text-rose-300 text-xs font-medium">Timeout</span></span>
+                    </div>
+                  </div>
+                  <div className={`flex w-full gap-0.5 md:gap-1.5 h-8 md:h-12 transition-all duration-500 ease-in-out ${pulseRhythm ? 'scale-[1.01] opacity-100 drop-shadow-[0_0_12px_rgba(56,189,248,0.2)]' : 'scale-100 opacity-95 drop-shadow-none'}`}>
+                    {Array.from({ length: progressWindow }).map((_, i) => {
+                      const queueIndex = i;
+                      const state = stagedProgress?.[queueIndex]?.state ?? 'empty';
+                      const glowClass = state === 'finalized'
+                        ? 'shadow-[0_0_15px_rgba(168,85,247,0.5)]'
+                        : state === 'timeout'
+                          ? 'shadow-[0_0_15px_rgba(244,63,94,0.6)]'
+                          : state === 'proposal'
+                            ? 'shadow-[0_0_12px_rgba(56,189,248,0.4)]'
+                            : 'shadow-none';
+                      return (
+                        <div
+                          key={i}
+                          className={
+                            'progress-tick-cell flex-1 rounded-sm md:rounded transition-[background-color,transform,box-shadow] duration-700 ease-out min-w-[2px] '
+                            + statusColor(state)
+                            + ' '
+                            + glowClass
+                          }
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-5 text-sm pt-4 border-t border-zinc-800/50 gap-2">
                     <span className="text-zinc-400 font-medium">Success Rate: <span className="text-purple-400 ml-1 text-base font-bold">{liveDashboard.proposalSuccess.toFixed(1)}%</span></span>
                     <span className="text-zinc-400 font-medium">
                       Latest Checkpoint: <span className="text-sky-300 ml-1 font-mono tracking-wider">{typeof liveDashboard.latestCheckpoint === 'number' ? liveDashboard.latestCheckpoint.toLocaleString() : '--'}</span>
                     </span>
-                 </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
             <div className="mt-4 grid grid-cols-2 gap-4">
-            <StatCard title="Live TPS" label="Live (5s)" value={liveDashboard.tps} decimals={0} unit="TPS" extraClass="border-sky-500/20" />
-           <StatCard title="Peak TPS" label="7d (1m)" value={liveDashboard.peakTps} decimals={0} unit="TPS" />
-          </div>
+              <StatCard title="Live TPS" label="Live (5s)" value={liveDashboard.tps} decimals={0} unit="TPS" extraClass="border-sky-500/20" />
+              <StatCard title="Peak TPS" label="7d (1m)" value={liveDashboard.peakTps} decimals={0} unit="TPS" />
+            </div>
           </div>
           {/* Recent Blocks (1/3 szerokości) */}
           <div className="rounded-2xl glass-panel flex flex-col overflow-hidden min-h-[300px]">
@@ -460,57 +464,57 @@ export default function DashboardGrid({ payload, stats, liveDashboard }: any) {
               <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest bg-purple-500/20 text-purple-300 ring-1 ring-inset ring-purple-500/30">Live Sync</span>
             </div>
             <div className="p-4 flex flex-col gap-3 flex-grow justify-center">
-               {stagedBlocks.slice(0, 3).map((block: RecentBlock, idx: number) => (
-                 <div key={`${block.block}-${idx}`} className="bg-black/40 border border-zinc-800/80 rounded-xl p-3.5 flex flex-col gap-2 shadow-inner transition-all duration-300 hover:border-purple-500/40 hover:bg-black/60 group">
-                   <div className="flex justify-between text-xs text-zinc-500">
-                     <span className="uppercase font-bold tracking-widest text-[10px]">Checkpoint</span>
-                     <span className="uppercase font-bold tracking-widest text-[10px]">Round</span>
-                   </div>
-                   <div className="flex justify-between text-base font-mono text-zinc-200">
-                     <span className="text-sky-300 font-semibold drop-shadow-sm">{block.block}</span>
-                     <span className="text-zinc-300">{block.round}</span>
-                   </div>
-                   <div className="mt-2 flex justify-between items-end border-t border-zinc-800/50 pt-2.5 gap-3">
-                     <div className="flex items-center gap-2.5 min-w-0">
-                       <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-zinc-900/80 text-xs font-bold text-white group-hover:border-purple-500/50 transition-colors">
-                         <span>{(block.validator ?? 'N').slice(0, 1).toUpperCase()}</span>
-                         {block.imageUrl ? (
-                           <img
-                             src={block.imageUrl}
-                             alt={block.validator}
-                             className="absolute inset-0 h-full w-full object-cover"
-                             loading="lazy"
-                             onError={(event) => { event.currentTarget.style.display = 'none'; }}
-                           />
-                         ) : null}
-                       </div>
-                       <div className="flex flex-col min-w-0">
-                         <span className="text-zinc-500/80 uppercase tracking-widest font-bold text-[9px] mb-0.5">Validator</span>
-                         <span className="text-sm font-semibold text-purple-200 truncate">{block.validator}</span>
-                       </div>
-                     </div>
-                     <div className="flex flex-col items-end gap-0.5">
-                       <span className="text-zinc-500/80 uppercase tracking-widest font-bold text-[9px]">Transactions</span>
-                       <span className="text-sm font-bold text-white tracking-tight">{block.transactions}</span>
-                     </div>
-                   </div>
-                 </div>
-               ))}
+              {stagedBlocks.slice(0, 3).map((block: RecentBlock, idx: number) => (
+                <div key={`${block.block}-${idx}`} className="bg-black/40 border border-zinc-800/80 rounded-xl p-3.5 flex flex-col gap-2 shadow-inner transition-all duration-300 hover:border-purple-500/40 hover:bg-black/60 group">
+                  <div className="flex justify-between text-xs text-zinc-500">
+                    <span className="uppercase font-bold tracking-widest text-[10px]">Checkpoint</span>
+                    <span className="uppercase font-bold tracking-widest text-[10px]">Round</span>
+                  </div>
+                  <div className="flex justify-between text-base font-mono text-zinc-200">
+                    <span className="text-sky-300 font-semibold drop-shadow-sm">{block.block}</span>
+                    <span className="text-zinc-300">{block.round}</span>
+                  </div>
+                  <div className="mt-2 flex justify-between items-end border-t border-zinc-800/50 pt-2.5 gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md border border-white/10 bg-zinc-900/80 text-xs font-bold text-white group-hover:border-purple-500/50 transition-colors">
+                        <span>{(block.validator ?? 'N').slice(0, 1).toUpperCase()}</span>
+                        {block.imageUrl ? (
+                          <img
+                            src={block.imageUrl}
+                            alt={block.validator}
+                            className="absolute inset-0 h-full w-full object-cover"
+                            loading="lazy"
+                            onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : null}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-zinc-500/80 uppercase tracking-widest font-bold text-[9px] mb-0.5">Validator</span>
+                        <span className="text-sm font-semibold text-purple-200 truncate">{block.validator}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-zinc-500/80 uppercase tracking-widest font-bold text-[9px]">Transactions</span>
+                      <span className="text-sm font-bold text-white tracking-tight">{block.transactions}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* --- Pozostałe statystyki (TPS, fee, itd) w siatce 5 kolumnowej --- */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
-          
-           <StatCard title="Average Fee" label="1m avg" value={liveDashboard.medianFee} decimals={3} unit="IOTA" />
-           <StatCard title="Highest Fee" label="60m peak" value={liveDashboard.highestFee} decimals={1} unit="IOTA" />
-           <StatCard title="Block Time" label="1m avg" value={liveDashboard.blockTime} decimals={0} unit="MS" />
-           <StatCard title="Block Fullness" label="60m avg" value={liveDashboard.fullness} decimals={1} unit="%" />
-           <StatCard title="Largest Block" label="60m peak" value={largestBlockTxs} decimals={0} unit="TXS" />
-           <StatCard title="Total Staked" label="Current" value={stats.totalStake} isCompact={true} unit="IOTA" />
-           <StatCard title="Pending Stake" label="Next Epoch" value={(Number(liveDashboard.pendingStake)/1000000)} decimals={2} unit="M IOTA" />
-           <StatCard title="System APY" label="Current" value={liveDashboard.apy} decimals={1} unit="%" />
+
+          <StatCard title="Average Fee" label="1m avg" value={liveDashboard.medianFee} decimals={3} unit="IOTA" />
+          <StatCard title="Highest Fee" label="60m peak" value={liveDashboard.highestFee} decimals={1} unit="IOTA" />
+          <StatCard title="Block Time" label="1m avg" value={liveDashboard.blockTime} decimals={0} unit="MS" />
+          <StatCard title="Block Fullness" label="60m avg" value={liveDashboard.fullness} decimals={1} unit="%" />
+          <StatCard title="Largest Block" label="60m peak" value={largestBlockTxs} decimals={0} unit="TXS" />
+          <StatCard title="Total Staked" label="Current" value={stats.totalStake} isCompact={true} unit="IOTA" />
+          <StatCard title="Pending Stake" label="Next Epoch" value={(Number(liveDashboard.pendingStake) / 1000000)} decimals={2} unit="M IOTA" />
+          <StatCard title="System APY" label="Current" value={liveDashboard.apy} decimals={1} unit="%" />
         </div>
       </div>
     </div>

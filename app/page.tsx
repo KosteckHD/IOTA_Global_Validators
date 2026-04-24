@@ -193,7 +193,7 @@ function buildProgressEntries(checkpointHistory: number[]) {
   }
 
   const entries: ProgressEntry[] = [];
-  
+
   let latestPositiveIndex = -1;
   for (let i = checkpointHistory.length - 1; i >= 0; i--) {
     const num = checkpointHistory[i];
@@ -314,7 +314,7 @@ function buildArcs(nodes: GlobeNode[], lastResultStatus: 'finalized' | 'timeout'
 
   for (let i = 0; i < ordered.length; i += 1) {
     const from = ordered[i];
-    
+
     // Generujemy pseudo-losową liczbę połączeń dla tego węzła (od 3 do 9, żeby był gęstszy mesh)
     const connectionCount = 3 + Math.floor(hashToUnit(from.id + 'count') * 7);
 
@@ -713,7 +713,7 @@ function HomeContent() {
     // Odczytujemy przedostatni rozwiązany stan (aby animacja zachowała stabilność w tickach)
     const reversed = [...liveDashboard.progressEntries].reverse();
     const resolvedEntry = reversed.find((entry: ProgressEntry) => entry.state === 'finalized' || entry.state === 'timeout');
-    
+
     // Z uwagi na to, że status bloku się zmienia co chwilę, stabilizujemy seed generatora animacji
     // by przy każdym wpadnięciu paczki z API, tablica obiektów "Arc" na wykresie NIE była od góry do dołu klonowana
     const lastResultStatus = 'finalized'; // Animacje latają domyślnie jako finalized
@@ -728,7 +728,7 @@ function HomeContent() {
         : arc.status === 'finalized'
           ? '224, 102, 255' // Ultra bright magenta/purple
           : '255, 80, 80'; // Bright neon red
-      
+
       const dist = haversineDistanceKm(arc.startLat, arc.startLng, arc.endLat, arc.endLng);
       const distRatio = Math.min(1, dist / 20000);
       const ranMap = hashToUnit(arc.id + 'rand');
@@ -740,7 +740,7 @@ function HomeContent() {
         stroke: (arc.status === 'proposal' ? 0.55 : 0.45) + (ranMap * 0.25 - 0.12), // Różne grubości linii
         altitude: dynamicAltitude,
         // Rozstrzał prędkości podróży od 100ms do 160ms na jednostkę, by animacje miały różne tempo lotu
-        dashTime: 100 + (ranMap * 60), 
+        dashTime: 100 + (ranMap * 60),
       };
     });
   }, [globeNodes, liveDashboard.progressEntries]);
@@ -757,9 +757,9 @@ function HomeContent() {
         return {
           ...arc,
           color: arc.color.replace('1.0)', '1.0)'),
-          stroke: (arc.stroke ?? 0.5) + 0.35, 
+          stroke: (arc.stroke ?? 0.5) + 0.35,
           altitude: (arc.altitude ?? 0.08) + 0.08, // podbijamy wyraziściej uniesienie hovered nad tłem
-          dashTime: (arc.dashTime ?? 120), 
+          dashTime: (arc.dashTime ?? 120),
         };
       }
 
@@ -1012,7 +1012,7 @@ function HomeContent() {
 
   useEffect(() => {
     if (!globeApiRef.current || !liveDashboard.recentBlocks.length) return;
-    
+
     // recentBlocks[0] to zawsze najświeższy block wedle buildRecentBlocks
     const latest = liveDashboard.recentBlocks[0];
     if (!latest || latest.block <= lastAnimatedBlockRef.current) return;
@@ -1145,36 +1145,36 @@ function HomeContent() {
         )}
 
         {/* Desktop Info Panel Left */}
-          {selected && (
-             <div className="absolute bottom-6 left-6 z-50 hidden lg:block glass-panel animate-fade-in-up p-4 border border-purple-500/30 bg-black/40 backdrop-blur-xl">
-               <div className="flex flex-col gap-1.5 text-white">
-                  <div className="text-[10px] text-purple-400 uppercase tracking-widest font-semibold flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-                    Selected Node
-                  </div>
-                  <div className="font-semibold text-lg">{selected.name}</div>
-                  <div className="text-xs text-zinc-400 flex items-center gap-2">
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    {formatLocationDetails(selected.location)}
-                  </div>
-               </div>
-             </div>
-          )}
-
-          {/* Desktop Info Panel Right */}
-          <div className="absolute bottom-6 right-6 z-50 hidden lg:block glass-panel animate-fade-in-up p-4 border border-purple-500/30 bg-black/40 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-8 text-white min-w-[240px]">
-               <div className="flex flex-col gap-1">
-                 <span className="text-[10px] uppercase text-zinc-500 tracking-widest font-semibold">Active Validators</span>
-                 <span className="text-xl font-medium text-white">{payload.total}</span>
-               </div>
-               <div className="flex flex-col gap-1 text-right">
-                 <span className="text-[10px] uppercase text-zinc-500 tracking-widest font-semibold">Total Voting Power</span>
-                 <span className="text-xl font-medium text-purple-100">{formatCompact(stats.totalVotingPower)}</span>
-               </div>
+        {selected && (
+          <div className="absolute bottom-6 left-6 z-50 hidden lg:block glass-panel animate-fade-in-up p-4 border border-purple-500/30 bg-black/40 backdrop-blur-xl">
+            <div className="flex flex-col gap-1.5 text-white">
+              <div className="text-[10px] text-purple-400 uppercase tracking-widest font-semibold flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+                Selected Node
+              </div>
+              <div className="font-semibold text-lg">{selected.name}</div>
+              <div className="text-xs text-zinc-400 flex items-center gap-2">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                {formatLocationDetails(selected.location)}
+              </div>
             </div>
           </div>
-        </section>
+        )}
+
+        {/* Desktop Info Panel Right */}
+        <div className="absolute bottom-6 right-6 z-50 hidden lg:block glass-panel animate-fade-in-up p-4 border border-purple-500/30 bg-black/40 backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-8 text-white min-w-[240px]">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] uppercase text-zinc-500 tracking-widest font-semibold">Active Validators</span>
+              <span className="text-xl font-medium text-white">{payload.total}</span>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              <span className="text-[10px] uppercase text-zinc-500 tracking-widest font-semibold">Total Voting Power</span>
+              <span className="text-xl font-medium text-purple-100">{formatCompact(stats.totalVotingPower)}</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div
         className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-4 md:px-8 md:py-8 mt-2 md:mt-4"
@@ -1272,7 +1272,7 @@ export default function Page() {
   return (
     <Suspense fallback={
       <div className="flex h-screen items-center justify-center text-white bg-black">
-         <span className="text-purple-400 font-mono tracking-widest uppercase animate-pulse">Initializing Network...</span>
+        <span className="text-purple-400 font-mono tracking-widest uppercase animate-pulse">Initializing Network...</span>
       </div>
     }>
       <HomeContent />

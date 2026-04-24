@@ -564,7 +564,7 @@ function pushCheckpoint(checkpoint: number | null, network: string = 'mainnet') 
     // Średni czas ról bloków IOTA to ok 400-500ms. Jeśli przerwa przekroczy mocno ten threshold (~2500ms), oznaczamy zacięcie węzła
     if (stallTime > 2500) {
       // Używamy sztucznego ujemnego ID jako symbolicznego "przedawnionego ticka"
-      const fakeTimeoutId = -Math.floor(Date.now() / 100); 
+      const fakeTimeoutId = -Math.floor(Date.now() / 100);
       // Skracamy interwał następnego zacięcia o połowę, by pchać bloczki równomierniej
       stalledStartTime[network] = Date.now() - 1500;
       netState.checkpointHistory.push(fakeTimeoutId);

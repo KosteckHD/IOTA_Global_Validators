@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useMemo, useState,useId } from 'react';
 import type { ValidatorInfo, NetworkOverview } from '@/lib/validator';
 
 type SortKey = keyof ValidatorInfo;
@@ -80,11 +80,13 @@ function PeerTrendChart({
   highlightedIndex: number;
   dataLabel?: string;
 }) {
+  const uniqueId = useId(); // Generuje unikalny ciąg znaków dla tej instancji
   const width = 600;
   const height = 240;
   const chartTop = 40;
   const chartBottom = 190;
   const chartHeight = chartBottom - chartTop;
+  
   const maxValue = Math.max(...points.map(p => p.value), 1);
   const minValue = Math.max(0, Math.min(...points.map(p => p.value)) * 0.85);
   const valueRange = Math.max(maxValue - minValue, 1);
@@ -105,17 +107,26 @@ function PeerTrendChart({
     ? `${linePath} L ${coordinates[coordinates.length - 1].x} ${chartBottom} L ${coordinates[0].x} ${chartBottom} Z`
     : '';
 
+  // Używamy unikalnych ID dla url(#...)
+  const lineGradId = `line-grad-${uniqueId.replace(/:/g, '')}`;
+  const areaGradId = `area-grad-${uniqueId.replace(/:/g, '')}`;
+
   return (
     <div className="rounded-xl border border-white/5 bg-black/20 p-5 min-w-0">
       <h4 className="mb-2 text-[10px] uppercase tracking-[0.24em] text-zinc-500 font-semibold">{dataLabel} Comparison (Peers)</h4>
       <div className="relative w-full mt-4" style={{ paddingBottom: '40%' }}>
-        <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 w-full h-full overflow-visible">
+        <svg 
+          viewBox={`0 0 ${width} ${height}`} 
+          className="absolute inset-0 w-full h-full overflow-visible"
+          preserveAspectRatio="none"
+        >
           <defs>
-            <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            {/* Dodano gradientUnits="userSpaceOnUse" - naprawia problem znikających linii przy płaskich danych */}
+            <linearGradient id={areaGradId} x1="0" y1="0" x2="0" y2={height} gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="#a855f7" stopOpacity="0.3" />
               <stop offset="100%" stopColor="#a855f7" stopOpacity="0.0" />
             </linearGradient>
-            <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+            <linearGradient id={lineGradId} x1="0" y1="0" x2={width} y2="0" gradientUnits="userSpaceOnUse">
               <stop offset="0%" stopColor="#38bdf8" />
               <stop offset="50%" stopColor="#a855f7" />
               <stop offset="100%" stopColor="#ec4899" />
@@ -126,33 +137,44 @@ function PeerTrendChart({
           <line x1={0} y1={chartTop + chartHeight/2} x2={width} y2={chartTop + chartHeight/2} stroke="rgba(255,255,255,0.06)" strokeDasharray="4 4" />
           <line x1={0} y1={chartBottom} x2={width} y2={chartBottom} stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
 
-          {coordinates.length > 0 && <path d={areaPath} fill="url(#areaGradient)" />}
-          {coordinates.length > 0 && <path d={linePath} fill="none" stroke="url(#lineGradient)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
+          {coordinates.length > 0 && <path d={areaPath} fill={`url(#${areaGradId})`} />}
+          {coordinates.length > 0 && (
+            <path 
+              d={linePath} 
+              fill="none" 
+              stroke={`url(#${lineGradId})`} 
+              strokeWidth="3" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              vectorEffect="non-scaling-stroke" // Gwarantuje, że linia nie będzie rozmyta na dużych ekranach
+            />
+          )}
           
           {coordinates.map((point, index) => {
             const isHighlighted = index === highlightedIndex;
             return (
-            <g key={point.label}>
-              {isHighlighted && (
-                <line x1={point.x} y1={chartTop} x2={point.x} y2={chartBottom} stroke="rgba(255,255,255,0.15)" strokeDasharray="2 4" />
-              )}
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={isHighlighted ? 6 : 4}
-                fill={isHighlighted ? '#ffffff' : '#0f172a'}
-                stroke={isHighlighted ? '#a855f7' : '#64748b'}
-                strokeWidth={isHighlighted ? 3 : 2}
-                className="transition-all duration-300"
-              />
-              <text x={point.x} y={point.y - 15} textAnchor="middle" fill={isHighlighted ? "#fff" : "#94a3b8"} fontSize={isHighlighted ? "14" : "11"} fontWeight="700">
-                {formatCompact(point.value)}
-              </text>
-              <text x={point.x} y={chartBottom + 25} textAnchor="middle" fill={isHighlighted ? "#e2e8f0" : "#64748b"} fontSize="11" fontWeight="600" letterSpacing="0.05em">
-                {point.label}
-              </text>
-            </g>
-          )})}
+              <g key={`${uniqueId}-point-${index}`}>
+                {isHighlighted && (
+                  <line x1={point.x} y1={chartTop} x2={point.x} y2={chartBottom} stroke="rgba(255,255,255,0.15)" strokeDasharray="2 4" />
+                )}
+                <circle
+                  cx={point.x}
+                  cy={point.y}
+                  r={isHighlighted ? 6 : 4}
+                  fill={isHighlighted ? '#ffffff' : '#0f172a'}
+                  stroke={isHighlighted ? '#a855f7' : '#64748b'}
+                  strokeWidth={isHighlighted ? 3 : 2}
+                  className="transition-all duration-300"
+                />
+                <text x={point.x} y={point.y - 15} textAnchor="middle" fill={isHighlighted ? "#fff" : "#94a3b8"} fontSize={isHighlighted ? "14" : "11"} fontWeight="700">
+                  {formatCompact(point.value)}
+                </text>
+                <text x={point.x} y={chartBottom + 25} textAnchor="middle" fill={isHighlighted ? "#e2e8f0" : "#64748b"} fontSize="11" fontWeight="600" letterSpacing="0.05em">
+                  {point.label}
+                </text>
+              </g>
+            )
+          })}
         </svg>
       </div>
     </div>
@@ -266,7 +288,7 @@ function ValidatorDetailPanel({
           />
         </div>
 
-        <div className="min-w-0 rounded-xl border border-white/10 bg-black/25 flex flex-col max-h-[520px]">
+        <div className="min-w-0 rounded-xl border border-white/10 bg-black/25 flex flex-col max-h-[662px]">
           <div className="mb-3 flex items-center justify-between gap-3 p-4 shrink-0 border-b border-white/5">
             <div>
               <p className="text-[10px] uppercase tracking-[0.24em] text-zinc-500">Statistics</p>
