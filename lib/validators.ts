@@ -463,9 +463,9 @@ async function fetchFromRpc(network: string = 'mainnet'): Promise<Validator[]> {
 }
 
 async function callRpc(method: string, network: string = 'mainnet') {
-  if (process.env.NODE_ENV === 'production' && (!env.IOTA_RPC_AUTH_HEADER || !env.IOTA_RPC_AUTH_TOKEN)) {
-    throw new Error('Secure RPC credentials are required in production. Set IOTA_RPC_AUTH_HEADER and IOTA_RPC_AUTH_TOKEN.');
-  }
+  // if (process.env.NODE_ENV === 'production' && (!env.IOTA_RPC_AUTH_HEADER || !env.IOTA_RPC_AUTH_TOKEN)) {
+  //   throw new Error('Secure RPC credentials are required in production. Set IOTA_RPC_AUTH_HEADER and IOTA_RPC_AUTH_TOKEN.');
+  // }
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
